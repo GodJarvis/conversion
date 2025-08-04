@@ -1,0 +1,21 @@
+{
+    "name": "godjarvis/conversion",
+    "description": "convert data single type to defined types by jsonSchema or others for response format",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "godjarvis",
+            "email": "2454280556@qq.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^7.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "GodJarvis\\Conversion\\": "src/"
+        }
+    }
+}
