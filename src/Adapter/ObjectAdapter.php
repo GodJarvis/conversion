@@ -49,11 +49,30 @@ class ObjectAdapter extends AbstractAdapter
             // 处理属性类型
             if ($propertyType instanceof \ReflectionNamedType) {
                 $typeName = $propertyType->getName();
-                if (in_array($typeName, ['int', 'string', 'float', 'bool', 'array'])) {
+                if (in_array($typeName, ['int', 'string', 'float', 'bool'])) {
                     $convertedValue = $this->convertScalarValue($value, $typeName);
                 } elseif (class_exists($typeName)) {
                     // 递归转换为嵌套对象
                     $convertedValue = $this->convertToObject($value, $typeName);
+                } elseif ($typeName === 'array') {
+                    $itemType = $this->getArrayItemType($property);
+                    if (empty($itemType)) {
+                        return $data;
+                    }
+
+                    if (in_array($itemType, ['int', 'string', 'float', 'bool'])) {
+                        foreach ((array)$value as $item) {
+                            $convertedValue[] = $this->convertScalarValue($item, $itemType);
+                        }
+                    } else if (class_exists($itemType)) {
+                        // 转换为对象数组：每个元素都转为 itemType 实例
+                        $convertedValue = [];
+                        foreach ($value as $item) {
+                            $convertedValue[] = $this->convertToObject($item, $itemType);
+                        }
+                    } else {
+                        return $data;
+                    }
                 } else {
                     return $data;
                 }
@@ -65,5 +84,23 @@ class ObjectAdapter extends AbstractAdapter
         }
 
         return $object;
+    }
+
+    private function getArrayItemType(\ReflectionProperty $property): ?string
+    {
+        $docComment = $property->getDocComment();
+        if (empty($docComment)) {
+            return null;
+        }
+
+        // 匹配 @var 注释中的数组类型（如 User[] 或 array<User>）
+        if (preg_match('/@var\s+([a-zA-Z0-9_\\\]+)\[\]/', $docComment, $matches)) {
+            return $matches[1];
+        }
+        if (preg_match('/@var\s+array<([a-zA-Z0-9_\\\]+)>/', $docComment, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }
