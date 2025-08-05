@@ -10,7 +10,7 @@ namespace GodJarvis\Conversion\Adapter;
 
 class PathAdapter extends AbstractAdapter
 {
-    public function format($format): array
+    protected function format($format): array
     {
         $rawData = $this->getRawData();
         if (empty($format) ||
@@ -23,7 +23,7 @@ class PathAdapter extends AbstractAdapter
         return $rawData;
     }
 
-    public function convertByPath(array &$data, array $typeMap)
+    private function convertByPath(array &$data, array $typeMap)
     {
         foreach ($typeMap as $path => $targetType) {
             $pathParts = explode('.', $path);
@@ -46,7 +46,7 @@ class PathAdapter extends AbstractAdapter
      * @return array 所有匹配元素的引用数组
      * @noinspection SlowArrayOperationsInLoopInspection
      */
-    public function findMatchingValues(&$data, array $pathParts, int $currentIndex = 0)
+    private function findMatchingValues(&$data, array $pathParts, int $currentIndex = 0)
     {
         $currentPart = $pathParts[$currentIndex];
         $isLastPart = $currentIndex === count($pathParts) - 1;

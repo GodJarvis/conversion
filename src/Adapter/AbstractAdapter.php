@@ -12,6 +12,8 @@ abstract class AbstractAdapter
 {
     private $data;
 
+    public $targetConversion;
+
     public function __construct($data)
     {
         $this->data = $this->tryConvertToArray($data);
@@ -22,7 +24,17 @@ abstract class AbstractAdapter
         return $this->data;
     }
 
-    public function tryConvertToArray($obj)
+    public function setTargetConversion($targetConversion)
+    {
+        $this->targetConversion = $targetConversion;
+    }
+
+    public function getTargetConversion()
+    {
+        return $this->targetConversion;
+    }
+
+    private function tryConvertToArray($obj)
     {
         $data = [];
         if (is_object($obj)) {
@@ -40,7 +52,7 @@ abstract class AbstractAdapter
         }, $data);
     }
 
-    public function convertValue($value, $type)
+    protected function convertValue($value, $type)
     {
         switch (strtolower($type)) {
             case 'int':
@@ -61,5 +73,10 @@ abstract class AbstractAdapter
         }
     }
 
-    abstract public function format($format);
+    public function convert()
+    {
+        return $this->format($this->targetConversion);
+    }
+
+    abstract protected function format($format);
 }

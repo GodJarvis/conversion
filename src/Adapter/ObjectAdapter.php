@@ -10,7 +10,7 @@ namespace GodJarvis\Conversion\Adapter;
 
 class ObjectAdapter extends AbstractAdapter
 {
-    public function format($format)
+    protected function format($format)
     {
         $rawData = $this->getRawData();
         if (empty($format) ||
@@ -28,7 +28,7 @@ class ObjectAdapter extends AbstractAdapter
         return $converted;
     }
 
-    public function convertToObject(array $data, string $targetClassName)
+    private function convertToObject(array $data, string $targetClassName)
     {
         $object = new $targetClassName();
         $reflection = new \ReflectionClass($targetClassName);

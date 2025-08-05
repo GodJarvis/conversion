@@ -10,7 +10,7 @@ namespace GodJarvis\Conversion\Adapter;
 
 class JsonSchemaAdapter extends AbstractAdapter
 {
-    public function format($format): array
+    protected function format($format): array
     {
         $rawData = $this->getRawData();
         if (empty($format) || !is_array($rawData)) {
@@ -35,7 +35,7 @@ class JsonSchemaAdapter extends AbstractAdapter
         return $converted;
     }
 
-    public function convertBySchema($data, array $schema)
+    private function convertBySchema($data, array $schema)
     {
         // 处理对象类型
         if ($schema['type'] === 'object' && isset($schema['properties'])) {
