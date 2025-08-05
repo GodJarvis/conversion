@@ -28,7 +28,7 @@ class JsonSchemaAdapter extends AbstractAdapter
             return $rawData;
         }
 
-        $converted = $this->convertBySchema($rawData, $format);
+        $converted = $this->convertBySchema($rawData, $schema);
         if (empty($converted)) {
             return $rawData;
         }
@@ -59,6 +59,6 @@ class JsonSchemaAdapter extends AbstractAdapter
         }
 
         // 基础类型转换（根据schema的type转换）
-        return $this->convertValue($data, $schema['type']);
+        return $this->convertScalarValue($data, $schema['type']);
     }
 }

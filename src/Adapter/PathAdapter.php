@@ -33,7 +33,7 @@ class PathAdapter extends AbstractAdapter
             }
 
             foreach ($matchingValues as &$value) {
-                $value = $this->convertValue($value, $targetType);
+                $value = $this->convertScalarValue($value, $targetType);
             }
             unset($value);
         }

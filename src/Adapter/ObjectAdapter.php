@@ -30,26 +30,38 @@ class ObjectAdapter extends AbstractAdapter
 
     private function convertToObject(array $data, string $targetClassName)
     {
-        $object = new $targetClassName();
-        $reflection = new \ReflectionClass($targetClassName);
-        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
+        if (!class_exists($targetClassName)) {
+            return $data;
+        }
 
+        $reflection = new \ReflectionClass($targetClassName);
+        $object = $reflection->newInstanceWithoutConstructor();
+        $properties = $reflection->getProperties();
         foreach ($properties as $property) {
             $propertyName = $property->getName();
-            // 获取属性声明的类型（如 int、string 等）
-            $type = $property->getType();
-            if (!$type) {
-                continue;
-            }
-            $typeName = $type->getName();
+            $propertyType = $property->getType();
 
             if (!isset($data[$propertyName])) {
                 continue;
             }
-            $value = $data[$propertyName];
+            $convertedValue = $value = $data[$propertyName];
 
-            // 赋值到对象属性
-            $object->$propertyName = $this->convertValue($value, $typeName);
+            // 处理属性类型
+            if ($propertyType instanceof \ReflectionNamedType) {
+                $typeName = $propertyType->getName();
+                if (in_array($typeName, ['int', 'string', 'float', 'bool', 'array'])) {
+                    $convertedValue = $this->convertScalarValue($value, $typeName);
+                } elseif (class_exists($typeName)) {
+                    // 递归转换为嵌套对象
+                    $convertedValue = $this->convertToObject($value, $typeName);
+                } else {
+                    return $data;
+                }
+            }
+
+            // 设置属性值（即使是私有属性也强制设置，可根据需求调整访问权限）
+            $property->setAccessible(true);
+            $property->setValue($object, $convertedValue);
         }
 
         return $object;

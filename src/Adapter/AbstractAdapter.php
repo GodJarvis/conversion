@@ -52,7 +52,7 @@ abstract class AbstractAdapter
         }, $data);
     }
 
-    protected function convertValue($value, $type)
+    protected function convertScalarValue($value, $type)
     {
         switch (strtolower($type)) {
             case 'int':
@@ -68,6 +68,8 @@ abstract class AbstractAdapter
             case 'bool':
             case 'boolean':
                 return (bool)filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            case 'array':
+                return (array)$value;
             default:
                 return $value;
         }
