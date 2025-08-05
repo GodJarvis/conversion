@@ -39,42 +39,37 @@ class ObjectAdapter extends AbstractAdapter
         $properties = $reflection->getProperties();
         foreach ($properties as $property) {
             $propertyName = $property->getName();
-            $propertyType = $property->getType();
-
             if (!isset($data[$propertyName])) {
                 continue;
             }
             $convertedValue = $value = $data[$propertyName];
+            $typeInfo = $this->parsePropertyType($property);
+            $typeName = $typeInfo['type'];
+            $itemType = $typeInfo['itemType'];
 
-            // 处理属性类型
-            if ($propertyType instanceof \ReflectionNamedType) {
-                $typeName = $propertyType->getName();
-                if (in_array($typeName, ['int', 'string', 'float', 'bool'])) {
+            // 仅处理有类型声明的属性
+            if ($typeName) {
+                if (is_scalar($value)) {
                     $convertedValue = $this->convertScalarValue($value, $typeName);
                 } elseif (class_exists($typeName)) {
                     // 递归转换为嵌套对象
                     $convertedValue = $this->convertToObject($value, $typeName);
-                } elseif ($typeName === 'array') {
-                    $itemType = $this->getArrayItemType($property);
-                    if (empty($itemType)) {
-                        return $data;
-                    }
+                }
+            }
 
-                    if (in_array($itemType, ['int', 'string', 'float', 'bool'])) {
-                        foreach ((array)$value as $item) {
-                            $convertedValue[] = $this->convertScalarValue($item, $itemType);
-                        }
-                    } else if (class_exists($itemType)) {
-                        // 转换为对象数组：每个元素都转为 itemType 实例
-                        $convertedValue = [];
-                        foreach ($value as $item) {
-                            $convertedValue[] = $this->convertToObject($item, $itemType);
-                        }
-                    } else {
-                        return $data;
+            // 处理数组类型（包括对象数组）
+            if ($typeName === 'array' && $itemType) {
+                $convertedValue = [];
+                // 如果数组元素是对象类型
+                if (class_exists($itemType)) {
+                    foreach ($value as $item) {
+                        $convertedValue[] = $this->convertToObject($item, $typeName);
                     }
                 } else {
-                    return $data;
+                    // 数组元素是基本类型
+                    foreach ((array)$value as $item) {
+                        $convertedValue[] = $this->convertScalarValue($item, $itemType);
+                    }
                 }
             }
 
@@ -86,21 +81,32 @@ class ObjectAdapter extends AbstractAdapter
         return $object;
     }
 
-    private function getArrayItemType(\ReflectionProperty $property): ?string
+    private function parsePropertyType(\ReflectionProperty $property): array
     {
         $docComment = $property->getDocComment();
+        $result = ['type' => null, 'itemType' => null];
+
         if (empty($docComment)) {
-            return null;
+            return $result;
         }
 
-        // 匹配 @var 注释中的数组类型（如 User[] 或 array<User>）
-        if (preg_match('/@var\s+([a-zA-Z0-9_\\\]+)\[\]/', $docComment, $matches)) {
-            return $matches[1];
-        }
-        if (preg_match('/@var\s+array<([a-zA-Z0-9_\\\]+)>/', $docComment, $matches)) {
-            return $matches[1];
+        // 匹配 @var 标签后的类型声明
+        if (preg_match('/@var\s+([^\s]+)/', $docComment, $matches)) {
+            $typeStr = $matches[1];
+
+            // 处理数组类型：User[] 或 array<User>
+            if (preg_match('/^([a-zA-Z0-9_\\\]+)\[\]$/', $typeStr, $arrayMatches)) {
+                $result['type'] = 'array';
+                $result['itemType'] = $arrayMatches[1];
+            } elseif (preg_match('/^array<([a-zA-Z0-9_\\\]+)>$/', $typeStr, $arrayMatches)) {
+                $result['type'] = 'array';
+                $result['itemType'] = $arrayMatches[1];
+            } else {
+                // 基本类型或对象类型
+                $result['type'] = $typeStr;
+            }
         }
 
-        return null;
+        return $result;
     }
 }
