@@ -37,12 +37,22 @@ class JsonSchemaAdapter extends AbstractAdapter
 
     private function convertBySchema($data, array $schema)
     {
+        if (empty($schema['type']) || !is_string($schema['type'])) {
+            return $data;
+        }
+
         // 处理对象类型
         if ($schema['type'] === 'object' && isset($schema['properties'])) {
             $converted = [];
             foreach ($schema['properties'] as $field => $fieldSchema) {
                 if (isset($data[$field])) {
                     $converted[$field] = $this->convertBySchema($data[$field], $fieldSchema);
+                }
+            }
+            // 保留Schema中未定义但数据中存在的字段
+            foreach ((array)$data as $field => $value) {
+                if (!isset($schema['properties'][$field])) {
+                    $converted[$field] = $value;
                 }
             }
             return $converted;
