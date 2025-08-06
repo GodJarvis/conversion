@@ -10,6 +10,13 @@ namespace GodJarvis\Conversion\Adapter;
 
 class ObjectAdapter extends AbstractAdapter
 {
+    private const SCALAR_TYPES = ['int', 'float', 'string', 'bool'];
+
+    private function isScalarType($type)
+    {
+        return in_array($type, self::SCALAR_TYPES, true);
+    }
+
     protected function format($format)
     {
         $rawData = $this->getRawData();
@@ -36,6 +43,7 @@ class ObjectAdapter extends AbstractAdapter
 
         $reflection = new \ReflectionClass($targetClassName);
         $object = $reflection->newInstanceWithoutConstructor();
+        $namespace = $reflection->getNamespaceName();
         $properties = $reflection->getProperties();
         foreach ($properties as $property) {
             $propertyName = $property->getName();
@@ -48,27 +56,35 @@ class ObjectAdapter extends AbstractAdapter
             $itemType = $typeInfo['itemType'];
 
             // 仅处理有类型声明的属性
-            if ($typeName) {
-                if (is_scalar($value)) {
-                    $convertedValue = $this->convertScalarValue($value, $typeName);
-                } elseif (class_exists($typeName)) {
+            $isScalarType = $typeName && $this->isscalarType($typeName);
+            if ($isScalarType && is_scalar($value)) {
+                $convertedValue = $this->convertScalarValue($value, $typeName);
+            } else if (!$isScalarType && $typeName !== 'array') {
+                if (!strpos($typeName, '\\')) {
+                    $typeName = "{$namespace}\\$typeName";
+                }
+                if (class_exists($typeName)) {
                     // 递归转换为嵌套对象
                     $convertedValue = $this->convertToObject($value, $typeName);
                 }
-            }
-
-            // 处理数组类型（包括对象数组）
-            if ($typeName === 'array' && $itemType) {
+            } elseif ($typeName === 'array' && $itemType) {
+                // 处理数组类型（包括对象数组）
                 $convertedValue = [];
-                // 如果数组元素是对象类型
-                if (class_exists($itemType)) {
-                    foreach ($value as $item) {
-                        $convertedValue[] = $this->convertToObject($item, $typeName);
-                    }
-                } else {
+                $isItemScalarType = $this->isScalarType($itemType);
+                if ($isItemScalarType) {
                     // 数组元素是基本类型
                     foreach ((array)$value as $item) {
                         $convertedValue[] = $this->convertScalarValue($item, $itemType);
+                    }
+                } elseif ($itemType !== 'array') {
+                    // 如果数组元素是对象类型
+                    if (!strpos($itemType, '\\')) {
+                        $itemType = "{$namespace}\\$itemType";
+                    }
+                    if (class_exists($itemType)) {
+                        foreach ($value as $item) {
+                            $convertedValue[] = $this->convertToObject($item, $itemType);
+                        }
                     }
                 }
             }
